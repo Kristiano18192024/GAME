@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <title>Tic Tac Toe</title>
+  <style>
+    :root {
+      --bg: #f9f9f9;
+      --primary: #007BFF;
+      --danger: #DC3545;
+      --line: #ccc;
+      --hover: #e0e0e0;
+    }
+
+    body {
+      margin: 0;
+      padding: 20px;
+      font-family: 'Segoe UI', sans-serif;
+      background: var(--bg);
+      color: #333;
+      text-align: center;
+    }
+
+    h2 {
+      margin-bottom: 10px;
+      color: var(--primary);
+    }
+
+    table {
+      margin: 20px auto;
+      border-collapse: collapse;
+    }
+
+    td {
+      width: 80px;
+      height: 80px;
+      font-size: 2.5em;
+      text-align: center;
+      vertical-align: middle;
+      border: 2px solid var(--line);
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+
+    td:hover {
+      background: var(--hover);
+    }
+
+    #status {
+      font-size: 1.2em;
+      margin-top: 15px;
+      padding: 10px;
+      font-weight: bold;
+    }
+
+    #status.X {
+      color: var(--primary);
+    }
+
+    #status.O {
+      color: var(--danger);
+    }
+
+    #controls {
+      margin-top: 10px;
+    }
+
+    select, button {
+      padding: 6px 12px;
+      font-size: 1em;
+      margin: 0 5px;
+      border-radius: 5px;
+      border: 1px solid #ccc;
+    }
+
+    button {
+      background-color: var(--primary);
+      color: white;
+      cursor: pointer;
+    }
+
+    button:hover {
+      background-color: #0056b3;
+    }
+
+    @media (max-width: 500px) {
+      td {
+        width: 60px;
+        height: 60px;
+        font-size: 2em;
+      }
+    }
+  </style>
+</head>
+<body>
+  <h2>Tic Tac Toe</h2>
+  <div id="controls">
+    Lawan:
+    <select id="mode">
+      <option value="2p">2 Pemain</option>
+      <option value="easy">Komputer (Easy)</option>
+      <option value="medium">Komputer (Medium)</option>
+      <option value="hard">Komputer (Hard)</option>
+    </select>
+    <button onclick="resetGame()">Reset</button>
+  </div>
+  <table id="board"></table>
+  <div id="status" class="X">Giliran: X</div>
+
+  <script>
+    let board, currentPlayer, gameOver;
+    const boardElement = document.getElementById('board');
+    const status = document.getElementById('status');
+    const modeSelect = document.getElementById('mode');
+
+    function resetGame() {
+      board = [['', '', ''], ['', '', ''], ['', '', '']];
+      currentPlayer = 'X';
+      gameOver = false;
+      updateStatus();
+      renderBoard();
+    }
+
+    function renderBoard() {
+      boardElement.innerHTML = '';
+      for (let i = 0; i < 3; i++) {
+        const row = document.createElement('tr');
+        for (let j = 0; j < 3; j++) {
+          const cell = document.createElement('td');
+          cell.textContent = board[i][j];
+          cell.addEventListener('click', () => handleClick(i, j));
+          row.appendChild(cell);
+        }
+        boardElement.appendChild(row);
+      }
+    }
+
+    function handleClick(i, j) {
+      if (board[i][j] || gameOver) return;
+      board[i][j] = currentPlayer;
+      renderBoard();
+
+      if (checkWin(currentPlayer)) {
+        status.textContent = `Pemain ${currentPlayer} menang!`;
+        status.className = currentPlayer;
+        gameOver = true;
+        return;
+      }
+
+      if (checkDraw()) {
+        status.textContent = 'Permainan seri!';
+        status.className = '';
+        gameOver = true;
+        return;
+      }
+
+      currentPlayer = currentPlayer === 'X' ? 'O' : 'X';
+      updateStatus();
+
+      if (isAIMode() && currentPlayer === 'O') {
+        setTimeout(AIMove, 400);
+      }
+    }
+
+    function updateStatus() {
+      status.textContent = `Giliran: ${currentPlayer}`;
+      status.className = currentPlayer;
+    }
+
+    function isAIMode() {
+      return modeSelect.value !== '2p';
+    }
+
+    function AIMove() {
+      let move;
+      const mode = modeSelect.value;
+      if (mode === 'easy') move = getRandomMove();
+      else if (mode === 'medium') move = getMediumMove();
+      else if (mode === 'hard') move = minimax(board, 'O').move;
+
+      if (move) handleClick(move[0], move[1]);
+    }
+
+    function getRandomMove() {
+      const moves = [];
+      for (let i = 0; i < 3; i++)
+        for (let j = 0; j < 3; j++)
+          if (!board[i][j]) moves.push([i, j]);
+      return moves[Math.floor(Math.random() * moves.length)];
+    }
+
+    function getMediumMove() {
+      for (let i = 0; i < 3; i++)
+        for (let j = 0; j < 3; j++)
+          if (!board[i][j]) {
+            board[i][j] = 'O';
+            if (checkWin('O')) return [i, j];
+            board[i][j] = '';
+          }
+
+      for (let i = 0; i < 3; i++)
+        for (let j = 0; j < 3; j++)
+          if (!board[i][j]) {
+            board[i][j] = 'X';
+            if (checkWin('X')) {
+              board[i][j] = '';
+              return [i, j];
+            }
+            board[i][j] = '';
+          }
+
+      return getRandomMove();
+    }
+
+    function minimax(b, player) {
+      if (checkWin('X')) return { score: -1 };
+      if (checkWin('O')) return { score: 1 };
+      if (checkDraw()) return { score: 0 };
+
+      const moves = [];
+      for (let i = 0; i < 3; i++) {
+        for (let j = 0; j < 3; j++) {
+          if (!b[i][j]) {
+            b[i][j] = player;
+            let result = minimax(b, player === 'O' ? 'X' : 'O');
+            moves.push({ score: result.score, move: [i, j] });
+            b[i][j] = '';
+          }
+        }
+      }
+
+      if (player === 'O') {
+        return moves.reduce((best, move) => move.score > best.score ? move : best);
+      } else {
+        return moves.reduce((best, move) => move.score < best.score ? move : best);
+      }
+    }
+
+    function checkWin(p) {
+      for (let i = 0; i < 3; i++) {
+        if (board[i][0] === p && board[i][1] === p && board[i][2] === p) return true;
+        if (board[0][i] === p && board[1][i] === p && board[2][i] === p) return true;
+      }
+      if (board[0][0] === p && board[1][1] === p && board[2][2] === p) return true;
+      if (board[0][2] === p && board[1][1] === p && board[2][0] === p) return true;
+      return false;
+    }
+
+    function checkDraw() {
+      return board.flat().every(cell => cell);
+    }
+
+    resetGame();
+  </script>
+</body>
+</html>
